@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0b0b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Will You Go to Dinner?</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffeef0;
+      color: #2c1a2c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background-color: #0b0b0b;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.35)),
+        url('invite-bg.jpg'),
+        radial-gradient(circle at top, #ffe6f3 0%, transparent 30%),
+        radial-gradient(circle at bottom right, #fff2c9 0%, transparent 28%);
+      background-size: cover, cover, auto, auto;
+      background-position: center, center, top, bottom right;
+      background-repeat: no-repeat;
+      background-blend-mode: overlay, normal, normal, normal;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+
+    .scene {
+      width: min(100%, 900px);
+      padding: clamp(24px, 6vw, 36px);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .floating-heart,
+    .floating-flower {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      opacity: 0.85;
+      animation: float 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .floating-heart:nth-child(1) { left: 12%; top: 12%; animation-delay: 0s; }
+    .floating-heart:nth-child(2) { left: 82%; top: 18%; animation-delay: 2s; }
+    .floating-heart:nth-child(3) { left: 20%; top: 72%; animation-delay: 1.4s; }
+    .floating-flower:nth-child(4) { left: 70%; top: 58%; animation-delay: 0.8s; }
+    .floating-flower:nth-child(5) { left: 42%; top: 10%; animation-delay: 3.4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-14px) scale(1.05); }
+    }
+
+    .invite-card {
+      position: relative;
+      border-radius: 32px;
+      background: linear-gradient(180deg, rgba(12, 16, 22, 0.96), rgba(20, 24, 30, 0.96));
+      color: #f8fafc;
+      box-shadow: 0 40px 110px rgba(2, 6, 23, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 36px;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .invite-card h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+      color: #ffffff;
+    }
+
+    .invite-card p {
+      margin: 0 0 28px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    /* Celebration canvas sits above everything and ignores pointer events */
+    #celebrationCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    .yes-button,
+    .no-button,
+    .secondary-button,
+    .submit-button {
+      border: none;
+      border-radius: 999px;
+      padding: 16px 28px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      touch-action: manipulation;
+    }
+
+    .yes-button {
+      background: linear-gradient(135deg, #ff5aa0, #ff8dc0);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 800;
+      box-shadow: 0 18px 40px rgba(255, 103, 156, 0.28);
+    }
+
+    .yes-button:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .no-button {
+      background: linear-gradient(180deg, #ffffff, #ffe8f5);
+      color: #8a4162;
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(165, 75, 110, 0.24);
+      box-shadow: 0 10px 24px rgba(164, 80, 125, 0.14);
+      position: relative;
+      touch-action: manipulation;
+    }
+
+    .screen {
+      display: none;
+      position: relative;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .options-grid {
+      display: grid;
+      gap: 18px;
+      margin: 26px 0 8px;
+    }
+
+    .choice-group p {
+      margin: 0 0 10px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .option-buttons {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .toggle-button {
+      appearance: none;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+    }
+
+    .toggle-button:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .toggle-button.active {
+      background: rgba(139, 92, 246, 0.95);
+      border-color: rgba(139, 92, 246, 0.95);
+      color: white;
+    }
+
+    .option-hint {
+      margin: 8px 0 0;
+      min-height: 1.15rem;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.92rem;
+      line-height: 1.3;
+    }
+
+    .submit-button:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+    }
+
+    label {
+      display: grid;
+      gap: 10px;
+      text-align: left;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    select,
+    input[type="radio"] + span {
+      font: inherit;
+    }
+
+    .select-field {
+      width: 100%;
+      min-width: 190px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #f8fafc;
+    }
+
+    .radio-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .radio-card {
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 16px;
+      text-align: center;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      cursor: pointer;
+      user-select: none;
+      color: #f8fafc;
+    }
+
+    input[type="radio"] {
+      appearance: none;
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    input[type="radio"] + span {
+      display: block;
+      padding: 0;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    input[type="radio"]:checked + .radio-card {
+      border-color: rgba(255, 147, 192, 0.95);
+      background: rgba(255, 147, 192, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px rgba(255, 118, 176, 0.12);
+    }
+
+    .submit-button,
+    .secondary-button {
+      background: #8b5cf6;
+      color: white;
+      width: min(240px, 100%);
+      margin: 0 auto;
+      display: block;
+      border-radius: 20px;
+    }
+
+    .secondary-button {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .final-message {
+      padding: 24px;
+      margin-top: 20px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px rgba(2, 6, 23, 0.45);
+      color: rgba(255, 255, 255, 0.92);
+      line-height: 1.7;
+    }
+
+    .final-message strong {
+      color: #ffffff;
+    }
+
+    .mini-hint {
+      margin-top: 10px;
+      color: #7c4a6d;
+      font-size: 0.95rem;
+    }
+
+    .page-link {
+      color: #d61d74;
+      text-decoration: none;
+    }
+
+    @media (max-width: 640px) {
+      .radio-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        flex-direction: column;
+      }
+
+      .invite-card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="floating-heart">❤️</div>
+    <div class="floating-heart">💗</div>
+    <div class="floating-heart">💕</div>
+    <div class="floating-flower">🌸</div>
+    <div class="floating-flower">🌹</div>
+    <canvas id="celebrationCanvas" aria-hidden="true"></canvas>
+
+    <main class="invite-card screen active" id="landingScreen">
+      <div style="font-size: 2rem;">🌷🌺✨</div>
+      <h1>Will you go to dinner with me?</h1>
+      <p>There are two answers, but only one of them gets us a special night out together.</p>
+      <div class="button-row">
+        <button id="yesButton" class="yes-button">Yes! 💖</button>
+        <button id="noButton" class="no-button">No</button>
+      </div>
+    </main>
+
+    <section class="invite-card screen" id="detailsScreen">
+      <h1>Perfect. Let's pick the best night.</h1>
+      <p>Tell me what you like, and I will turn it into a sweet surprise.</p>
+
+      <div class="options-grid">
+        <div class="choice-group">
+          <p>Pick a day</p>
+          <div class="option-buttons" id="dayButtons" role="group" aria-label="Pick a day">
+            <button type="button" class="toggle-button" data-day="Friday">Friday</button>
+            <button type="button" class="toggle-button" data-day="Saturday">Saturday</button>
+            <button type="button" class="toggle-button" data-day="Sunday">Sunday</button>
+          </div>
+          <p class="option-hint" id="dayHint"></p>
+        </div>
+
+        <div class="choice-group">
+          <p>Pick a time</p>
+          <div class="option-buttons" id="timeButtons" role="group" aria-label="Pick a time">
+            <button type="button" class="toggle-button" data-time="6:30 PM">6:30 PM</button>
+            <button type="button" class="toggle-button" data-time="7:15 PM">7:15 PM</button>
+            <button type="button" class="toggle-button" data-time="8:00 PM">8:00 PM</button>
+          </div>
+          <p class="option-hint" id="timeHint"></p>
+        </div>
+
+        <div>
+          <p style="margin-bottom: 12px; font-weight: 600; color: #4f3650;">Favorite food style</p>
+          <div class="radio-row">
+            <label>
+              <input type="radio" name="foodOption" value="Italian" checked />
+              <div class="radio-card">Italian</div>
+            </label>
+            <label>
+              <input type="radio" name="foodOption" value="Sushi" />
+              <div class="radio-card">Sushi</div>
+            </label>
+            <label>
+              <input type="radio" name="foodOption" value="Mexican" />
+              <div class="radio-card">Mexican</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <p class="option-hint" id="formHint">Pick a day and time to continue.</p>
+      <button id="confirmButton" class="submit-button" disabled>Lock it in</button>
+      <button id="backButton" class="secondary-button">Back to yes/no</button>
+    </section>
+
+    <section class="invite-card screen" id="finalScreen">
+      <h1>We are set!</h1>
+      <div class="final-message" id="finalMessage">
+        <p><strong>Great choice.</strong> I can't wait to enjoy dinner with you.</p>
+        <p class="mini-hint">Your selections will be turned into the perfect place and plan.</p>
+      </div>
+      <button id="restartButton" class="secondary-button">Plan again</button>
+    </section>
+  </div>
+
+  <script>
+    const landingScreen = document.getElementById('landingScreen');
+    const detailsScreen = document.getElementById('detailsScreen');
+    const finalScreen = document.getElementById('finalScreen');
+    const yesButton = document.getElementById('yesButton');
+    const noButton = document.getElementById('noButton');
+    const confirmButton = document.getElementById('confirmButton');
+    const backButton = document.getElementById('backButton');
+    const restartButton = document.getElementById('restartButton');
+    const finalMessage = document.getElementById('finalMessage');
+    const dayButtons = Array.from(document.querySelectorAll('.toggle-button[data-day]'));
+    const timeButtons = Array.from(document.querySelectorAll('.toggle-button[data-time]'));
+    const dayHint = document.getElementById('dayHint');
+    const timeHint = document.getElementById('timeHint');
+    const formHint = document.getElementById('formHint');
+    let selectedDay = null;
+    let selectedTime = null;
+
+    const foodRadios = Array.from(document.querySelectorAll('input[name="foodOption"]'));
+    const container = document.querySelector('.scene');
+    const landingArea = document.getElementById('landingScreen');
+    const canvas = document.getElementById('celebrationCanvas');
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    let cw = 0, ch = 0;
+    let animationId = null;
+    const confettiParticles = [];
+    const settledConfetti = [];
+    const fireworks = [];
+    let floorY = 0;
+    // No-button movement state and animation (magnet-like sliding)
+    let noState = { x: 0, y: 0 };
+    let noAnimId = null;
+    let noMoveAnimId = null;
+    let noTarget = { x: 0, y: 0 };
+    let lastAvoidTime = Date.now();
+    const returnDelay = 600; // ms before button tries to return
+    const returnEase = 0.18; // lerp speed for return
+    const moveEase = 0.36; // lerp speed when sliding away (faster)
+    const moveStrength = 240; // how far it slides away (farther)
+
+    function setNoTransform(x, y) {
+      noState.x = x;
+      noState.y = y;
+      noButton.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    function animateNoTo(targetX, targetY, ease = moveEase) {
+      noTarget.x = targetX;
+      noTarget.y = targetY;
+      // if already animating, cancel and override so return can interrupt
+      if (noMoveAnimId) { cancelAnimationFrame(noMoveAnimId); noMoveAnimId = null; }
+
+      function stepMove() {
+        // lerp current state toward target
+        noState.x += (noTarget.x - noState.x) * ease;
+        noState.y += (noTarget.y - noState.y) * ease;
+        // snap if very close
+        if (Math.abs(noState.x - noTarget.x) < 0.5) noState.x = noTarget.x;
+        if (Math.abs(noState.y - noTarget.y) < 0.5) noState.y = noTarget.y;
+        setNoTransform(noState.x, noState.y);
+        if (noState.x === noTarget.x && noState.y === noTarget.y) {
+          cancelAnimationFrame(noMoveAnimId);
+          noMoveAnimId = null;
+          return;
+        }
+        noMoveAnimId = requestAnimationFrame(stepMove);
+      }
+
+      noMoveAnimId = requestAnimationFrame(stepMove);
+    }
+
+    function animateNoReturn() {
+      animateNoTo(0, 0, returnEase);
+    }
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      cw = canvas.width = Math.floor(landingArea.clientWidth);
+      ch = canvas.height = Math.floor(landingArea.clientHeight);
+      canvas.style.left = landingArea.offsetLeft + 'px';
+      canvas.style.top = landingArea.offsetTop + 'px';
+      floorY = ch - 36; // floor position within the landing card
+      // redraw area after resize (no confetti to preserve)
+      if (!animationId) {
+        if (ctx) ctx.clearRect(0, 0, cw, ch);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function random(min, max) { return Math.random() * (max - min) + min; }
+
+    // Heart confetti removed — only fireworks used now
+
+    function createConfettiFromBottom(count = 60) {
+      // confetti removed; no-op
+      return;
+    }
+
+    function createFirework(x, y) {
+      const count = 28 + Math.floor(Math.random() * 24);
+      const hue = Math.floor(Math.random() * 360);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = random(2, 6);
+        fireworks.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 80 + Math.random() * 40,
+          color: `hsl(${hue} ${60 + Math.random()*30}% 60%)`,
+        });
+      }
+    }
+
+    function step() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, cw, ch);
+
+      // confetti removed — nothing to draw or update here
+
+      // update fireworks
+      for (let i = fireworks.length - 1; i >= 0; i--) {
+        const f = fireworks[i];
+        f.vy += 0.06;
+        f.x += f.vx;
+        f.y += f.vy;
+        f.life--;
+        ctx.beginPath();
+        ctx.fillStyle = f.color;
+        ctx.arc(f.x, f.y, 2.2, 0, Math.PI*2);
+        ctx.fill();
+        if (f.life <= 0) fireworks.splice(i, 1);
+      }
+
+      // draw a subtle floor line
+      ctx.fillStyle = 'rgba(0,0,0,0.04)';
+      ctx.fillRect(0, floorY + (ch * 0.005), cw, 4);
+
+      // schedule next frame if there are moving particles (fireworks only)
+      if (fireworks.length) {
+        animationId = requestAnimationFrame(step);
+      } else {
+        if (animationId) cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+    }
+
+    function createConfettiStream(duration = 1400, intervalMs = 120) {
+      // confetti stream disabled — spawn occasional fireworks instead
+      const emitter = setInterval(() => {
+        if (Math.random() > 0.2) createFirework(random(cw*0.2, cw*0.8), random(ch*0.15, ch*0.45));
+        if (!animationId) animationId = requestAnimationFrame(step);
+      }, intervalMs);
+
+      setTimeout(() => clearInterval(emitter), duration);
+    }
+
+    function celebrateOnce() {
+      // fireworks-only celebration
+      createConfettiStream(1600, 120);
+      for (let i = 0; i < 6; i++) {
+        createFirework(random(cw*0.2, cw*0.8), random(ch*0.12, ch*0.35));
+      }
+      if (!animationId) animationId = requestAnimationFrame(step);
+    }
+
+
+    function showScreen(screenElement) {
+      [landingScreen, detailsScreen, finalScreen].forEach((screen) => {
+        screen.classList.toggle('active', screen === screenElement);
+      });
+    }
+
+    function activateOption(buttons, selectedValue, dataAttr) {
+      buttons.forEach((button) => {
+        const option = button.dataset[dataAttr];
+        const isActive = option === selectedValue;
+        button.classList.toggle('active', isActive);
+      });
+    }
+
+    function updateConfirmState() {
+      const ready = Boolean(selectedDay && selectedTime);
+      confirmButton.disabled = !ready;
+      formHint.textContent = ready ? '' : 'Pick a day and time to continue.';
+    }
+
+    function showOptionHint(hintElement, message) {
+      hintElement.textContent = message;
+      if (!message) return;
+      setTimeout(() => {
+        if (hintElement.textContent === message) {
+          hintElement.textContent = '';
+        }
+      }, 3200);
+    }
+
+    dayButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const dayValue = button.dataset.day;
+        if (dayValue === 'Friday') {
+          selectedDay = null;
+          activateOption(dayButtons, selectedDay, 'day');
+          showOptionHint(dayHint, 'Oops — sorry, I’m busy on Friday.');
+          updateConfirmState();
+          return;
+        }
+
+        selectedDay = dayValue;
+        activateOption(dayButtons, selectedDay, 'day');
+        showOptionHint(dayHint, '');
+
+        if (selectedDay === 'Saturday' && selectedTime === '6:30 PM') {
+          selectedTime = null;
+          activateOption(timeButtons, selectedTime, 'time');
+          showOptionHint(timeHint, 'Oops — Saturday at 6:30 is a little too early.');
+        }
+
+        updateConfirmState();
+      });
+    });
+
+    timeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const timeValue = button.dataset.time;
+        if (selectedDay === 'Saturday' && timeValue === '6:30 PM') {
+          selectedTime = null;
+          activateOption(timeButtons, selectedTime, 'time');
+          showOptionHint(timeHint, 'Oops — a little too early for Saturday.');
+          updateConfirmState();
+          return;
+        }
+
+        selectedTime = timeValue;
+        activateOption(timeButtons, selectedTime, 'time');
+        showOptionHint(timeHint, '');
+        updateConfirmState();
+      });
+    });
+
+    updateConfirmState();
+
+    yesButton.addEventListener('click', () => {
+      // small celebration then move to details
+      celebrateOnce();
+      // repeat a couple of times for a longer effect
+      setTimeout(celebrateOnce, 600);
+      setTimeout(celebrateOnce, 1200);
+      showScreen(detailsScreen);
+    });
+
+    backButton.addEventListener('click', () => {
+      showScreen(landingScreen);
+    });
+
+    restartButton.addEventListener('click', () => {
+      showScreen(landingScreen);
+      setNoTransform(0, 0);
+      if (noAnimId) { cancelAnimationFrame(noAnimId); noAnimId = null; }
+      if (noMoveAnimId) { cancelAnimationFrame(noMoveAnimId); noMoveAnimId = null; }
+    });
+
+    function buildDinnerPlan(day, time, foodChoice) {
+      const dayLines = {
+        Friday: 'Friday is in my calendar, and I already cleared the evening so we can leave together from home without a second thought.',
+        Saturday: 'Saturday is locked in — I already reserved the table and we’re walking out together from home straight into the night.',
+        Sunday: 'Sunday is perfect; I already pinned it as our slow, easy evening and we’re leaving home together for a relaxed dinner.',
+      };
+
+      const timeLines = {
+        '6:30 PM': {
+          Friday: 'I like 6:30 for a quiet start, but Friday is off the table, so this one gets skipped.',
+          Saturday: '6:30 is a little too early for Saturday and I’ve already pulled it back, but Sunday would still be nice.',
+          Sunday: '6:30 on Sunday means we’ll leave early enough for a calm, delicious night without any rush.',
+        },
+        '7:15 PM': {
+          Friday: '7:15 gives us the perfect window after work and an easy drive out from home.',
+          Saturday: '7:15 on Saturday has the best energy; I already have us on the list and we’re heading out together.',
+          Sunday: '7:15 on Sunday keeps the evening unhurried and still special, just like I planned.',
+        },
+        '8:00 PM': {
+          Friday: '8:00 would be great, but Friday is unavailable. The other nights are all set.',
+          Saturday: '8:00 on Saturday is prime time; I already told them we’d be there right when the evening starts.',
+          Sunday: '8:00 on Sunday is a great choice — I scheduled it so we can still enjoy the whole night once we leave home.',
+        },
+      };
+
+      const foodLines = {
+        Sushi: 'You love sushi, and I know that. I already booked the spot with the freshest fish and I’ll let you take the first bite.',
+        Mexican: 'Mexican is the move. I already called Plaza Azteca and they’ve got our favorite booth waiting for us.',
+        Italian: 'Italian is a great choice. I already reserved Vino’s Italian Restaurant and they know we’re coming together from home.',
+      };
+
+      const restaurantLine = {
+        Sushi: 'a bright sushi bar with fresh rolls and a shared sake flight',
+        Mexican: 'Plaza Azteca, where they have our favorite table and the best margaritas',
+        Italian: 'Vino’s Italian Restaurant with the cozy corner booth I already asked for',
+      }[foodChoice];
+
+      return {
+        dayText: dayLines[day],
+        timeText: timeLines[time][day],
+        foodText: foodLines[foodChoice],
+        placeText: restaurantLine,
+      };
+    }
+
+    confirmButton.addEventListener('click', () => {
+      const day = selectedDay;
+      const time = selectedTime;
+      const foodChoice = foodRadios.find((radio) => radio.checked)?.value || 'Italian';
+      
+      const plans = {
+        Friday: {
+          '6:30 PM': 'Friday at 6:30 is off — but Saturday and Sunday are already on my radar.',
+          '7:15 PM': 'Friday nights are sacred, and 7:15 is when I will be ready for you.',
+          '8:00 PM': 'Friday at 8 means we start the weekend right, no distractions.',
+        },
+        Saturday: {
+          '6:30 PM': 'Saturday at 6:30 is too early — I need you relaxed, not rushed.',
+          '7:15 PM': 'Saturday at 7:15 is the sweet spot. Table is reserved, I am ready.',
+          '8:00 PM': 'Saturday night at 8 — I have already got us set for the best part of the evening.',
+        },
+        Sunday: {
+          '6:30 PM': 'Sunday at 6:30 is perfect for a slow, easy dinner just us.',
+          '7:15 PM': 'Sunday at 7:15 keeps the night open and unhurried, just how I like it.',
+          '8:00 PM': 'Sunday at 8 means we start with wine and nowhere to be after.',
+        },
+      };
+
+      const foodLines = {
+        Sushi: 'You love sushi — I already know. Fresh fish, your smile, that is the whole meal.',
+        Mexican: 'Plaza Azteca is locked in. They know us, and the margaritas are waiting.',
+        Italian: 'Vino is has our booth. Nothing fancy, just good pasta and better company.',
+      };
+
+      const mainText = plans[day][time];
+      const foodText = foodLines[foodChoice];
+
+      finalMessage.innerHTML = `
+        <p><strong>${day} at ${time}.</strong> ${mainText}</p>
+        <p>${foodText}</p>
+        <p class="mini-hint">Done. See you soon.</p>
+      `;
+
+      showScreen(finalScreen);
+    });
+
+    function moveNoButton(event) {
+      const rect = noButton.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+      const threshold = 120;
+
+      if (distance < threshold) {
+        // compute repel direction from cursor to button center
+        const dirX = centerX - event.clientX;
+        const dirY = centerY - event.clientY;
+        const len = Math.hypot(dirX, dirY) || 1;
+        const nx = dirX / len;
+        const ny = dirY / len;
+        const parentRect = landingArea.getBoundingClientRect();
+        const margin = 24;
+        const minX = 12;
+        const minY = 12;
+        const maxX = parentRect.width - rect.width - margin * 2;
+        const maxY = parentRect.height - rect.height - margin * 2;
+        // desired new position (relative to landing area)
+        const offsetLeft = noButton.offsetLeft;
+        const offsetTop = noButton.offsetTop;
+        let desiredX = offsetLeft + nx * moveStrength;
+        let desiredY = offsetTop + ny * moveStrength;
+        // clamp
+        desiredX = Math.max(minX, Math.min(maxX, desiredX));
+        desiredY = Math.max(minY, Math.min(maxY, desiredY));
+        const translateX = desiredX - offsetLeft;
+        const translateY = desiredY - offsetTop;
+        // animate toward target
+        if (noMoveAnimId) { cancelAnimationFrame(noMoveAnimId); noMoveAnimId = null; }
+        animateNoTo(translateX, translateY, moveEase);
+        lastAvoidTime = Date.now();
+        // cancel any pending return animation
+        if (noAnimId) { cancelAnimationFrame(noAnimId); noAnimId = null; }
+      } else {
+        // if we've given the user some space, animate the button back
+        if (Date.now() - lastAvoidTime > returnDelay) {
+          animateNoReturn();
+        }
+      }
+    }
+
+    function getPointerPoint(event) {
+      if (event.touches && event.touches.length) {
+        return { clientX: event.touches[0].clientX, clientY: event.touches[0].clientY };
+      }
+      if (event.changedTouches && event.changedTouches.length) {
+        return { clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY };
+      }
+      return { clientX: event.clientX, clientY: event.clientY };
+    }
+
+    function handlePointerInput(event) {
+      if (!landingScreen.classList.contains('active')) return;
+      const point = getPointerPoint(event);
+      if (point) moveNoButton(point);
+    }
+
+    document.addEventListener('mousemove', handlePointerInput);
+    document.addEventListener('pointermove', handlePointerInput);
+    document.addEventListener('pointerdown', handlePointerInput);
+    document.addEventListener('touchstart', handlePointerInput, { passive: true });
+    document.addEventListener('touchmove', handlePointerInput, { passive: true });
+
+    noButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      noButton.textContent = 'Oops! 💫';
+      setTimeout(() => {
+        noButton.textContent = 'No';
+      }, 800);
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {
+        // ignore registration failures on iOS or when served from file://
+      });
+    }
+  </script>
+</body>
+</html>
