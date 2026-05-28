@@ -2,16 +2,21 @@
   "name": "Dinner Invite",
   "short_name": "Invite",
   "description": "A playful dinner invitation app.",
-  "start_url": "/invite-app/dinner-invite.html",
+  "start_url": "/invite-app/index.html",
   "scope": "/invite-app/",
   "display": "standalone",
   "theme_color": "#0b0b0b",
   "background_color": "#0b0b0b",
   "icons": [
     {
-      "src": "/invite-app/invite-bg.jpg",
+      "src": "/invite-app/icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
+    },
+    {
+      "src": "/invite-app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
