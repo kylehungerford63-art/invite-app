@@ -9,7 +9,7 @@
   "background_color": "#0b0b0b",
   "icons": [
     {
-      "src": "/invite-app/icon-192.png"
+      "src": "/invite-app/invite-bg.jpg",
       "sizes": "192x192",
       "type": "image/jpeg"
     }
